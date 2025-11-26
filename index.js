@@ -123,6 +123,60 @@ app.post('/api/tasks', async (req, res) => {
     res.status(500).json({ error: 'Erro ao criar task' });
   }
 });
+// Atualizar tarefa
+app.put('/api/tasks/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const taskId = req.params.id;
+    const updates = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({
+        ...updates,
+        updated_at: Date.now()
+      })
+      .eq('id', taskId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar task:', err.message);
+    res.status(500).json({ error: 'Erro ao atualizar task' });
+  }
+});
+// Deletar tarefa
+app.delete('/api/tasks/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const taskId = req.params.id;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao deletar task:', err.message);
+    res.status(500).json({ error: 'Erro ao deletar task' });
+  }
+});
 
 // -------------------------
 // PORTA
