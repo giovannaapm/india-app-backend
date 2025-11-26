@@ -177,6 +177,149 @@ app.delete('/api/tasks/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao deletar task' });
   }
 });
+// ------------------------------
+// PROJETOS
+// ------------------------------
+
+// Listar projetos
+app.get('/api/projects', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar projetos:', err.message);
+    res.status(500).json({ error: 'Erro ao buscar projetos' });
+  }
+});
+
+// Criar projeto
+app.post('/api/projects', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const {
+      nome,
+      descricao,
+      area,
+      status,
+      prioridade,
+      data_inicio,
+      data_fim,
+      progresso
+    } = req.body || {};
+
+    if (!nome || !area) {
+      return res.status(400).json({ error: 'Nome e área são obrigatórios' });
+    }
+
+    const newProject = {
+      id: req.body.id || undefined, // se você quiser gerar no backend, pode tirar isso
+      user_id: userId,
+      nome,
+      descricao: descricao || null,
+      area,
+      status: status || 'PLANNED',
+      prioridade: prioridade || 'MEDIUM',
+      data_inicio: data_inicio || null,
+      data_fim: data_fim || null,
+      progresso: typeof progresso === 'number' ? progresso : 0
+    };
+
+    const { data, error } = await supabase
+      .from('projects')
+      .insert(newProject)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar projeto:', err.message);
+    res.status(500).json({ error: 'Erro ao criar projeto' });
+  }
+});
+
+// Atualizar projeto
+app.put('/api/projects/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const projectId = req.params.id;
+    const body = req.body || {};
+
+    const updates = {};
+
+    if (body.nome !== undefined)        updates.nome = body.nome;
+    if (body.descricao !== undefined)   updates.descricao = body.descricao;
+    if (body.area !== undefined)        updates.area = body.area;
+    if (body.status !== undefined)      updates.status = body.status;
+    if (body.prioridade !== undefined)  updates.prioridade = body.prioridade;
+    if (body.data_inicio !== undefined) updates.data_inicio = body.data_inicio;
+    if (body.data_fim !== undefined)    updates.data_fim = body.data_fim;
+    if (body.progresso !== undefined)   updates.progresso = body.progresso;
+
+    updates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('projects')
+      .update(updates)
+      .eq('id', projectId)
+      .eq('user_id', userId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar projeto:', err.message);
+    res.status(500).json({ error: 'Erro ao atualizar projeto' });
+  }
+});
+
+// Deletar projeto
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const projectId = req.params.id;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao deletar projeto:', err.message);
+    res.status(500).json({ error: 'Erro ao deletar projeto' });
+  }
+});
 
 // -------------------------
 // PORTA
