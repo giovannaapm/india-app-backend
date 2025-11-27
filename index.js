@@ -454,6 +454,45 @@ app.post('/api/courses', async (req, res) => {
     res.status(500).json({ error: 'Erro ao criar curso', details: err.message || String(err) });
   }
 });
+// PUT /api/courses/:id
+app.put('/api/courses/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const updates = {
+      ...req.body,
+      updated_at: Date.now()
+    };
+
+    // Nunca atualiza esses campos
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+
+    const { data, error } = await supabase
+      .from('courses')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (PUT /courses/:id):', error);
+      return res.status(500).json({ error: 'Erro ao atualizar curso', details: error.message || error });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar curso (exception):', err);
+    res.status(500).json({ error: 'Erro ao atualizar curso', details: err.message || String(err) });
+  }
+});
 
 // -------------------------
 // PORTA
