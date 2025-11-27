@@ -551,6 +551,65 @@ app.get('/api/lessons', async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar aulas', details: err.message || String(err) });
   }
 });
+// -------------------------
+// LESSONS
+// -------------------------
+
+// GET /api/lessons
+... (já está aí)
+
+// POST /api/lessons
+app.post('/api/lessons', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const {
+      curso_id,
+      titulo,
+      descricao,
+      status,
+      ordem,
+      duracao_estimada_minutos
+    } = req.body || {};
+
+    if (!curso_id || !titulo || !ordem) {
+      return res.status(400).json({ error: 'curso_id, titulo e ordem são obrigatórios' });
+    }
+
+    const now = Date.now();
+
+    const { data, error } = await supabase
+      .from('lessons')
+      .insert([{
+        id: randomUUID(),
+        user_id: userId,
+        curso_id,
+        titulo,
+        descricao: descricao || null,
+        status: status || null,
+        ordem,
+        duracao_estimada_minutos: duracao_estimada_minutos || null,
+        created_at: now,
+        updated_at: now
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /lessons):', error);
+      return res.status(500).json({ error: 'Erro ao criar aula', details: error.message || error });
+    }
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar aula (exception):', err);
+    res.status(500).json({ error: 'Erro ao criar aula', details: err.message || String(err) });
+  }
+});
 
 // -------------------------
 // PORTA
