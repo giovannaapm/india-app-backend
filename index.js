@@ -25,8 +25,10 @@ app.get('/api/health', (req, res) => {
 });
 
 // -------------------------
-// GET /api/tasks
+// TASKS
 // -------------------------
+
+// GET /api/tasks
 app.get('/api/tasks', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
@@ -41,18 +43,19 @@ app.get('/api/tasks', async (req, res) => {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error (GET /tasks):', error);
+      return res.status(500).json({ error: 'Erro ao buscar tasks', details: error.message || error });
+    }
 
     res.json(data);
   } catch (err) {
-    console.error('Erro ao buscar tasks:', err.message);
-    res.status(500).json({ error: 'Erro ao buscar tasks' });
+    console.error('Erro ao buscar tasks (exception):', err);
+    res.status(500).json({ error: 'Erro ao buscar tasks', details: err.message || String(err) });
   }
 });
 
-// -------------------------
 // POST /api/tasks
-// -------------------------
 app.post('/api/tasks', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
@@ -79,7 +82,7 @@ app.post('/api/tasks', async (req, res) => {
       dia_recorrencia_original,
       observacoes,
       subtasks
-    } = req.body;
+    } = req.body || {};
 
     if (!titulo) {
       return res.status(400).json({ error: 'O campo titulo é obrigatório' });
@@ -115,49 +118,63 @@ app.post('/api/tasks', async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error (POST /tasks):', error);
+      return res.status(500).json({ error: 'Erro ao criar task', details: error.message || error });
+    }
 
     res.status(201).json(data);
   } catch (err) {
-    console.error('Erro ao criar task:', err.message);
-    res.status(500).json({ error: 'Erro ao criar task' });
+    console.error('Erro ao criar task (exception):', err);
+    res.status(500).json({ error: 'Erro ao criar task', details: err.message || String(err) });
   }
 });
-// Atualizar tarefa
+
+// PUT /api/tasks/:id
 app.put('/api/tasks/:id', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
-    const taskId = req.params.id;
-    const updates = req.body;
+    const { id } = req.params;
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID não informado' });
     }
 
+    const updates = {
+      ...req.body,
+      updated_at: Date.now()
+    };
+
+    // Nunca atualizar esses campos diretamente
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+
     const { data, error } = await supabase
       .from('tasks')
-      .update({
-        ...updates,
-        updated_at: Date.now()
-      })
-      .eq('id', taskId)
+      .update(updates)
+      .eq('id', id)
       .eq('user_id', userId)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error (PUT /tasks/:id):', error);
+      return res.status(500).json({ error: 'Erro ao atualizar task', details: error.message || error });
+    }
 
     res.json(data);
   } catch (err) {
-    console.error('Erro ao atualizar task:', err.message);
-    res.status(500).json({ error: 'Erro ao atualizar task' });
+    console.error('Erro ao atualizar task (exception):', err);
+    res.status(500).json({ error: 'Erro ao atualizar task', details: err.message || String(err) });
   }
 });
-// Deletar tarefa
+
+// DELETE /api/tasks/:id
 app.delete('/api/tasks/:id', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
-    const taskId = req.params.id;
+    const { id } = req.params;
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID não informado' });
@@ -166,25 +183,30 @@ app.delete('/api/tasks/:id', async (req, res) => {
     const { error } = await supabase
       .from('tasks')
       .delete()
-      .eq('id', taskId)
+      .eq('id', id)
       .eq('user_id', userId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error (DELETE /tasks/:id):', error);
+      return res.status(500).json({ error: 'Erro ao excluir task', details: error.message || error });
+    }
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Erro ao deletar task:', err.message);
-    res.status(500).json({ error: 'Erro ao deletar task' });
+    console.error('Erro ao excluir task (exception):', err);
+    res.status(500).json({ error: 'Erro ao excluir task', details: err.message || String(err) });
   }
 });
-// ------------------------------
-// PROJETOS
-// ------------------------------
 
-// Listar projetos
+// -------------------------
+// PROJECTS
+// -------------------------
+
+// GET /api/projects
 app.get('/api/projects', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
+
     if (!userId) {
       return res.status(400).json({ error: 'User ID não informado' });
     }
@@ -195,112 +217,135 @@ app.get('/api/projects', async (req, res) => {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error (GET /projects):', error);
+      return res.status(500).json({ error: 'Erro ao buscar projetos', details: error.message || error });
+    }
 
     res.json(data);
   } catch (err) {
-    console.error('Erro ao buscar projetos:', err.message);
-    res.status(500).json({ error: 'Erro ao buscar projetos' });
+    console.error('Erro ao buscar projetos (exception):', err);
+    res.status(500).json({ error: 'Erro ao buscar projetos', details: err.message || String(err) });
   }
 });
 
-// Criar projeto
+// POST /api/projects
 app.post('/api/projects', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
+
     if (!userId) {
       return res.status(400).json({ error: 'User ID não informado' });
     }
 
     const {
       nome,
-      descricao,
       area,
+      subarea_profissional,
+      categoria,
+      tipo,
+      objetivo,
+      descricao,
       status,
-      prioridade,
       data_inicio,
-      data_fim,
-      progresso
+      data_fim_prevista,
+      metrica_sucesso,
+      checklist,
+      checklists
     } = req.body || {};
 
     if (!nome || !area) {
       return res.status(400).json({ error: 'Nome e área são obrigatórios' });
     }
 
-    const newProject = {
-      id: req.body.id || undefined, // se você quiser gerar no backend, pode tirar isso
-      user_id: userId,
-      nome,
-      descricao: descricao || null,
-      area,
-      status: status || 'PLANNED',
-      prioridade: prioridade || 'MEDIUM',
-      data_inicio: data_inicio || null,
-      data_fim: data_fim || null,
-      progresso: typeof progresso === 'number' ? progresso : 0
-    };
+    const now = Date.now();
 
     const { data, error } = await supabase
       .from('projects')
-      .insert(newProject)
-      .select('*')
+      .insert([{
+        id: randomUUID(),
+        user_id: userId,
+        nome,
+        area,
+        subarea_profissional: subarea_profissional || null,
+        categoria: categoria || null,
+        tipo: tipo || null,
+        objetivo: objetivo || null,
+        descricao: descricao || null,
+        status: status || null,
+        data_inicio: data_inicio || null,
+        data_fim_prevista: data_fim_prevista || null,
+        metrica_sucesso: metrica_sucesso || null,
+        checklist: checklist || null,
+        checklists: checklists || null,
+        created_at: now,
+        updated_at: now
+      }])
+      .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error (POST /projects):', error);
+      return res.status(500).json({
+        error: 'Erro ao criar projeto',
+        details: error.message || error
+      });
+    }
 
-    res.status(201).json(data);
+    res.json(data);
   } catch (err) {
-    console.error('Erro ao criar projeto:', err.message);
-    res.status(500).json({ error: 'Erro ao criar projeto' });
+    console.error('Erro ao criar projeto (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao criar projeto',
+      details: err.message || String(err)
+    });
   }
 });
 
-// Atualizar projeto
+// PUT /api/projects/:id
 app.put('/api/projects/:id', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
     if (!userId) {
       return res.status(400).json({ error: 'User ID não informado' });
     }
 
-    const projectId = req.params.id;
-    const body = req.body || {};
+    const updates = {
+      ...req.body,
+      updated_at: Date.now()
+    };
 
-    const updates = {};
-
-    if (body.nome !== undefined)        updates.nome = body.nome;
-    if (body.descricao !== undefined)   updates.descricao = body.descricao;
-    if (body.area !== undefined)        updates.area = body.area;
-    if (body.status !== undefined)      updates.status = body.status;
-    if (body.prioridade !== undefined)  updates.prioridade = body.prioridade;
-    if (body.data_inicio !== undefined) updates.data_inicio = body.data_inicio;
-    if (body.data_fim !== undefined)    updates.data_fim = body.data_fim;
-    if (body.progresso !== undefined)   updates.progresso = body.progresso;
-
-    updates.updated_at = new Date().toISOString();
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
 
     const { data, error } = await supabase
       .from('projects')
       .update(updates)
-      .eq('id', projectId)
+      .eq('id', id)
       .eq('user_id', userId)
-      .select('*')
+      .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error (PUT /projects/:id):', error);
+      return res.status(500).json({ error: 'Erro ao atualizar projeto', details: error.message || error });
+    }
 
     res.json(data);
   } catch (err) {
-    console.error('Erro ao atualizar projeto:', err.message);
-    res.status(500).json({ error: 'Erro ao atualizar projeto' });
+    console.error('Erro ao atualizar projeto (exception):', err);
+    res.status(500).json({ error: 'Erro ao atualizar projeto', details: err.message || String(err) });
   }
 });
 
-// Deletar projeto
+// DELETE /api/projects/:id
 app.delete('/api/projects/:id', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
-    const projectId = req.params.id;
+    const { id } = req.params;
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID não informado' });
@@ -309,15 +354,18 @@ app.delete('/api/projects/:id', async (req, res) => {
     const { error } = await supabase
       .from('projects')
       .delete()
-      .eq('id', projectId)
+      .eq('id', id)
       .eq('user_id', userId);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error (DELETE /projects/:id):', error);
+      return res.status(500).json({ error: 'Erro ao excluir projeto', details: error.message || error });
+    }
 
     res.json({ success: true });
   } catch (err) {
-    console.error('Erro ao deletar projeto:', err.message);
-    res.status(500).json({ error: 'Erro ao deletar projeto' });
+    console.error('Erro ao excluir projeto (exception):', err);
+    res.status(500).json({ error: 'Erro ao excluir projeto', details: err.message || String(err) });
   }
 });
 
@@ -329,4 +377,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Índia App Backend rodando na porta ${PORT}`);
 });
-
