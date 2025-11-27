@@ -610,6 +610,44 @@ app.post('/api/lessons', async (req, res) => {
     res.status(500).json({ error: 'Erro ao criar aula', details: err.message || String(err) });
   }
 });
+// PUT /api/lessons/:id
+app.put('/api/lessons/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const updates = {
+      ...req.body,
+      updated_at: Date.now()
+    };
+
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+
+    const { data, error } = await supabase
+      .from('lessons')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (PUT /lessons/:id):', error);
+      return res.status(500).json({ error: 'Erro ao atualizar aula', details: error.message || error });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar aula (exception):', err);
+    res.status(500).json({ error: 'Erro ao atualizar aula', details: err.message || String(err) });
+  }
+});
 
 // -------------------------
 // PORTA
