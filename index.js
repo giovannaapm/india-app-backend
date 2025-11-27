@@ -368,6 +368,36 @@ app.delete('/api/projects/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao excluir projeto', details: err.message || String(err) });
   }
 });
+// -------------------------
+// COURSES
+// -------------------------
+
+// GET /api/courses
+app.get('/api/courses', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { data, error } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error (GET /courses):', error);
+      return res.status(500).json({ error: 'Erro ao buscar cursos', details: error.message || error });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar cursos (exception):', err);
+    res.status(500).json({ error: 'Erro ao buscar cursos', details: err.message || String(err) });
+  }
+});
 
 // -------------------------
 // PORTA
