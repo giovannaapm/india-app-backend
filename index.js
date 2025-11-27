@@ -551,12 +551,6 @@ app.get('/api/lessons', async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar aulas', details: err.message || String(err) });
   }
 });
-// -------------------------
-// LESSONS
-// -------------------------
-
-// GET /api/lessons
-... (já está aí)
 
 // POST /api/lessons
 app.post('/api/lessons', async (req, res) => {
@@ -610,6 +604,7 @@ app.post('/api/lessons', async (req, res) => {
     res.status(500).json({ error: 'Erro ao criar aula', details: err.message || String(err) });
   }
 });
+
 // PUT /api/lessons/:id
 app.put('/api/lessons/:id', async (req, res) => {
   try {
@@ -648,6 +643,7 @@ app.put('/api/lessons/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar aula', details: err.message || String(err) });
   }
 });
+
 // DELETE /api/lessons/:id
 app.delete('/api/lessons/:id', async (req, res) => {
   try {
