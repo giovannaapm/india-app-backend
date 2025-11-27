@@ -648,6 +648,33 @@ app.put('/api/lessons/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao atualizar aula', details: err.message || String(err) });
   }
 });
+// DELETE /api/lessons/:id
+app.delete('/api/lessons/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('lessons')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Supabase error (DELETE /lessons/:id):', error);
+      return res.status(500).json({ error: 'Erro ao excluir aula', details: error.message || error });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir aula (exception):', err);
+    res.status(500).json({ error: 'Erro ao excluir aula', details: err.message || String(err) });
+  }
+});
 
 // -------------------------
 // PORTA
