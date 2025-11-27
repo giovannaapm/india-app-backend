@@ -520,6 +520,37 @@ app.delete('/api/courses/:id', async (req, res) => {
     res.status(500).json({ error: 'Erro ao excluir curso', details: err.message || String(err) });
   }
 });
+// -------------------------
+// LESSONS
+// -------------------------
+
+// GET /api/lessons
+app.get('/api/lessons', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { data, error } = await supabase
+      .from('lessons')
+      .select('*')
+      .eq('user_id', userId)
+      .order('curso_id', { ascending: true })
+      .order('ordem', { ascending: true });
+
+    if (error) {
+      console.error('Supabase error (GET /lessons):', error);
+      return res.status(500).json({ error: 'Erro ao buscar aulas', details: error.message || error });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar aulas (exception):', err);
+    res.status(500).json({ error: 'Erro ao buscar aulas', details: err.message || String(err) });
+  }
+});
 
 // -------------------------
 // PORTA
