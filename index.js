@@ -398,6 +398,62 @@ app.get('/api/courses', async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar cursos', details: err.message || String(err) });
   }
 });
+// POST /api/courses
+app.post('/api/courses', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const {
+      nome,
+      plataforma,
+      area,
+      tipo,
+      status,
+      descricao,
+      link,
+      carga_horaria_total
+    } = req.body || {};
+
+    if (!nome || !plataforma) {
+      return res.status(400).json({ error: 'Nome e plataforma são obrigatórios' });
+    }
+
+    const now = Date.now();
+
+    const { data, error } = await supabase
+      .from('courses')
+      .insert([{
+        id: randomUUID(),
+        user_id: userId,
+        nome,
+        plataforma,
+        area: area || null,
+        tipo: tipo || null,
+        status: status || null,
+        descricao: descricao || null,
+        link: link || null,
+        carga_horaria_total: carga_horaria_total || null,
+        created_at: now,
+        updated_at: now
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /courses):', error);
+      return res.status(500).json({ error: 'Erro ao criar curso', details: error.message || error });
+    }
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar curso (exception):', err);
+    res.status(500).json({ error: 'Erro ao criar curso', details: err.message || String(err) });
+  }
+});
 
 // -------------------------
 // PORTA
