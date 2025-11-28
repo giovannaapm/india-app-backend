@@ -673,6 +673,185 @@ app.delete('/api/lessons/:id', async (req, res) => {
 });
 
 // -------------------------
+// BOOKS
+// -------------------------
+
+// GET /api/books
+app.get('/api/books', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { data, error } = await supabase
+      .from('books')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error (GET /books):', error);
+      return res
+        .status(500)
+        .json({ error: 'Erro ao buscar livros', details: error.message || error });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar livros (exception):', err);
+    res
+      .status(500)
+      .json({ error: 'Erro ao buscar livros', details: err.message || String(err) });
+  }
+});
+
+// POST /api/books
+app.post('/api/books', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const {
+      titulo,
+      autor,
+      cover,
+      categoria,
+      status,
+      formato,
+      total_paginas,
+      pagina_atual,
+      data_inicio,
+      data_conclusao,
+      notas_gerais
+    } = req.body || {};
+
+    if (!titulo) {
+      return res.status(400).json({ error: 'O campo titulo é obrigatório' });
+    }
+
+    const now = Date.now();
+
+    const { data, error } = await supabase
+      .from('books')
+      .insert([
+        {
+          id: randomUUID(),
+          user_id: userId,
+          titulo: titulo || null,
+          autor: autor || null,
+          cover: cover || null,
+          categoria: categoria || null,
+          status: status || null,
+          formato: formato || null,
+          total_paginas: total_paginas || null,
+          pagina_atual: pagina_atual || null,
+          data_inicio: data_inicio || null,
+          data_conclusao: data_conclusao || null,
+          notas_gerais: notas_gerais || null,
+          created_at: now,
+          updated_at: now
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /books):', error);
+      return res
+        .status(500)
+        .json({ error: 'Erro ao criar livro', details: error.message || error });
+    }
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar livro (exception):', err);
+    res
+      .status(500)
+      .json({ error: 'Erro ao criar livro', details: err.message || String(err) });
+  }
+});
+
+// PUT /api/books/:id
+app.put('/api/books/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const updates = {
+      ...req.body,
+      updated_at: Date.now()
+    };
+
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+
+    const { data, error } = await supabase
+      .from('books')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (PUT /books/:id):', error);
+      return res
+        .status(500)
+        .json({ error: 'Erro ao atualizar livro', details: error.message || error });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar livro (exception):', err);
+    res
+      .status(500)
+      .json({ error: 'Erro ao atualizar livro', details: err.message || String(err) });
+  }
+});
+
+// DELETE /api/books/:id
+app.delete('/api/books/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('books')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Supabase error (DELETE /books/:id):', error);
+      return res
+        .status(500)
+        .json({ error: 'Erro ao excluir livro', details: error.message || error });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir livro (exception):', err);
+    res
+      .status(500)
+      .json({ error: 'Erro ao excluir livro', details: err.message || String(err) });
+  }
+});
+
+// -------------------------
 // PORTA
 // -------------------------
 const PORT = process.env.PORT || 3000;
