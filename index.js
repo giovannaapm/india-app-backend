@@ -850,6 +850,182 @@ app.delete('/api/books/:id', async (req, res) => {
       .json({ error: 'Erro ao excluir livro', details: err.message || String(err) });
   }
 });
+// -------------------------
+// NOTES
+// -------------------------
+
+// GET /api/notes
+app.get('/api/notes', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error (GET /notes):', error);
+      return res
+        .status(500)
+        .json({ error: 'Erro ao buscar notas', details: error.message || error });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar notas (exception):', err);
+    res
+      .status(500)
+      .json({ error: 'Erro ao buscar notas', details: err.message || String(err) });
+  }
+});
+
+// POST /api/notes
+app.post('/api/notes', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const {
+      tipo_entidade,
+      entidade_id,
+      titulo,
+      conteudo,
+    } = req.body || {};
+
+    if (!tipo_entidade || !entidade_id || !titulo || !conteudo) {
+      return res.status(400).json({ error: 'Campos obrigatórios: tipo_entidade, entidade_id, titulo, conteudo' });
+    }
+
+    const now = Date.now();
+
+    const { data, error } = await supabase
+      .from('notes')
+      .insert([
+        {
+          id: randomUUID(),
+          user_id: userId,
+          tipo_entidade,
+          entidade_id,
+          titulo,
+          conteudo,
+          created_at: now,
+          updated_at: now,
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /notes):', error);
+      return res
+        .status(500)
+        .json({ error: 'Erro ao criar nota', details: error.message || error });
+    }
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar nota (exception):', err);
+    res
+      .status(500)
+      .json({ error: 'Erro ao criar nota', details: err.message || String(err) });
+  }
+});
+
+// PUT /api/notes/:id
+app.put('/api/notes/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    if (!id) {
+      return res.status(400).json({ error: 'Note id é obrigatório' });
+    }
+
+    const updates = {
+      ...req.body,
+      updated_at: Date.now(),
+    };
+
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+
+    const { data, error } = await supabase
+      .from('notes')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (PUT /notes/:id):', error);
+      return res
+        .status(500)
+        .json({ error: 'Erro ao atualizar nota', details: error.message || error });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'Nota não encontrada' });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar nota (exception):', err);
+    res
+      .status(500)
+      .json({ error: 'Erro ao atualizar nota', details: err.message || String(err) });
+  }
+});
+
+// DELETE /api/notes/:id
+app.delete('/api/notes/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    if (!id) {
+      return res.status(400).json({ error: 'Note id é obrigatório' });
+    }
+
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Supabase error (DELETE /notes/:id):', error);
+      return res
+        .status(500)
+        .json({ error: 'Erro ao excluir nota', details: error.message || error });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir nota (exception):', err);
+    res
+      .status(500)
+      .json({ error: 'Erro ao excluir nota', details: err.message || String(err) });
+  }
+});
 
 // -------------------------
 // PORTA
