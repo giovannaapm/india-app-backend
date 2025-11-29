@@ -1536,6 +1536,375 @@ app.delete('/api/goals/:id', async (req, res) => {
     });
   }
 });
+// -------------------------
+// FINANCIAL CATEGORIES
+// -------------------------
+
+// GET /api/financial-categories
+app.get('/api/financial-categories', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    // Pega categorias do usuário + categorias padrão (isDefault = true)
+    let query = supabase
+      .from('financial_categories')
+      .select('*')
+      .or(`user_id.eq.${userId},isDefault.is.true`);
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Supabase error (GET /financial-categories):', error);
+      return res.status(500).json({
+        error: 'Erro ao buscar categorias financeiras',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data || []);
+  } catch (err) {
+    console.error('Erro ao buscar categorias financeiras (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao buscar categorias financeiras',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// POST /api/financial-categories
+app.post('/api/financial-categories', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { name, type, area, isDefault } = req.body || {};
+
+    if (!name) {
+      return res.status(400).json({ error: 'O campo name é obrigatório' });
+    }
+
+    const { data, error } = await supabase
+      .from('financial_categories')
+      .insert([
+        {
+          id: randomUUID(),
+          user_id: userId,
+          name,
+          type: type || null,
+          area: area || null,
+          isDefault: typeof isDefault === 'boolean' ? isDefault : false,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /financial-categories):', error);
+      return res.status(500).json({
+        error: 'Erro ao criar categoria financeira',
+        details: error.message || error,
+      });
+    }
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar categoria financeira (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao criar categoria financeira',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// PUT /api/financial-categories/:id
+app.put('/api/financial-categories/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const updates = { ...req.body };
+
+    delete updates.id;
+    delete updates.user_id;
+
+    const { data, error } = await supabase
+      .from('financial_categories')
+      .update(updates)
+      .eq('id', id)
+      .or(`user_id.eq.${userId},isDefault.is.true`)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (PUT /financial-categories/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao atualizar categoria financeira',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar categoria financeira (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao atualizar categoria financeira',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// DELETE /api/financial-categories/:id
+app.delete('/api/financial-categories/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('financial_categories')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId); // só apaga categorias do usuário
+
+    if (error) {
+      console.error('Supabase error (DELETE /financial-categories/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao excluir categoria financeira',
+        details: error.message || error,
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir categoria financeira (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao excluir categoria financeira',
+      details: err.message || String(err),
+    });
+  }
+});
+// -------------------------
+// TRANSACTIONS
+// -------------------------
+
+// GET /api/transactions
+app.get('/api/transactions', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    let query = supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Supabase error (GET /transactions):', error);
+      return res.status(500).json({
+        error: 'Erro ao buscar transações',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data || []);
+  } catch (err) {
+    console.error('Erro ao buscar transações (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao buscar transações',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// POST /api/transactions
+app.post('/api/transactions', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const {
+      tipo,
+      area,
+      centroCusto,
+      categoria,
+      descricao,
+      valor,
+      dataVencimento,
+      dataPagamento,
+      statusPagamento,
+      formaPagamento,
+      recorrente,
+      recorrenciaTipo,
+      observacoes,
+      classificacaoDespesa,
+      classificacaoValor,
+      parcelaAtual,
+      totalParcelas,
+      idParcelamento,
+      tarefa_id,
+      projeto_id,
+      attachments,
+    } = req.body || {};
+
+    if (valor == null) {
+      return res.status(400).json({ error: 'O campo valor é obrigatório' });
+    }
+
+    const now = Date.now();
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .insert([
+        {
+          id: randomUUID(),
+          user_id: userId,
+          tipo: tipo || null,
+          area: area || null,
+          centroCusto: centroCusto || null,
+          categoria: categoria || null,
+          descricao: descricao || null,
+          valor,
+          dataVencimento: dataVencimento || null,
+          dataPagamento: dataPagamento || null,
+          statusPagamento: statusPagamento || null,
+          formaPagamento: formaPagamento || null,
+          recorrente: recorrente ?? false,
+          recorrenciaTipo: recorrenciaTipo || null,
+          observacoes: observacoes || null,
+          classificacaoDespesa: classificacaoDespesa || null,
+          classificacaoValor: classificacaoValor || null,
+          parcelaAtual: parcelaAtual ?? null,
+          totalParcelas: totalParcelas ?? null,
+          idParcelamento: idParcelamento || null,
+          tarefa_id: tarefa_id || null,
+          projeto_id: projeto_id || null,
+          attachments: attachments || null,
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /transactions):', error);
+      return res.status(500).json({
+        error: 'Erro ao criar transação',
+        details: error.message || error,
+      });
+    }
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar transação (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao criar transação',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// PUT /api/transactions/:id
+app.put('/api/transactions/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const updates = {
+      ...req.body,
+      updated_at: Date.now(),
+    };
+
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (PUT /transactions/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao atualizar transação',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar transação (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao atualizar transação',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// DELETE /api/transactions/:id
+app.delete('/api/transactions/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Supabase error (DELETE /transactions/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao excluir transação',
+        details: error.message || error,
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir transação (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao excluir transação',
+      details: err.message || String(err),
+    });
+  }
+});
 
 // -------------------------
 // PORTA
