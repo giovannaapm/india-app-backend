@@ -1026,6 +1026,516 @@ app.delete('/api/notes/:id', async (req, res) => {
       .json({ error: 'Erro ao excluir nota', details: err.message || String(err) });
   }
 });
+// -------------------------
+// HABITS
+// -------------------------
+
+// GET /api/habits
+app.get('/api/habits', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { data, error } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error (GET /habits):', error);
+      return res.status(500).json({
+        error: 'Erro ao buscar hábitos',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar hábitos (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao buscar hábitos',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// POST /api/habits
+app.post('/api/habits', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const {
+      nome,
+      descricao,
+      area,
+      tipo_recorrencia,
+      config_frequencia,
+      meta_diaria,
+      unidade,
+      ativo,
+      data_inicio,
+      streak_atual,
+      melhor_streak,
+    } = req.body || {};
+
+    if (!nome) {
+      return res.status(400).json({ error: 'O campo nome é obrigatório' });
+    }
+
+    const now = Date.now();
+
+    const { data, error } = await supabase
+      .from('habits')
+      .insert([
+        {
+          id: randomUUID(),
+          user_id: userId,
+          nome,
+          descricao: descricao || null,
+          area: area || null,
+          tipo_recorrencia: tipo_recorrencia || null,
+          config_frequencia: config_frequencia || null,
+          meta_diaria: meta_diaria ?? null,
+          unidade: unidade || null,
+          ativo: typeof ativo === 'boolean' ? ativo : true,
+          data_inicio: data_inicio || null,
+          streak_atual: streak_atual ?? 0,
+          melhor_streak: melhor_streak ?? 0,
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /habits):', error);
+      return res.status(500).json({
+        error: 'Erro ao criar hábito',
+        details: error.message || error,
+      });
+    }
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar hábito (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao criar hábito',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// PUT /api/habits/:id
+app.put('/api/habits/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const updates = {
+      ...req.body,
+      updated_at: Date.now(),
+    };
+
+    // Campos que não devem ser atualizados diretamente
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+
+    const { data, error } = await supabase
+      .from('habits')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (PUT /habits/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao atualizar hábito',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar hábito (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao atualizar hábito',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// DELETE /api/habits/:id
+app.delete('/api/habits/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('habits')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Supabase error (DELETE /habits/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao excluir hábito',
+        details: error.message || error,
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir hábito (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao excluir hábito',
+      details: err.message || String(err),
+    });
+  }
+});
+// -------------------------
+// HABIT LOGS
+// -------------------------
+
+// GET /api/habit-logs
+app.get('/api/habit-logs', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const habitId = req.query.habit_id;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    let query = supabase
+      .from('habit_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('data', { ascending: false });
+
+    if (habitId) {
+      query = query.eq('habito_id', habitId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Supabase error (GET /habit-logs):', error);
+      return res.status(500).json({
+        error: 'Erro ao buscar logs de hábitos',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar logs de hábitos (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao buscar logs de hábitos',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// POST /api/habit-logs
+app.post('/api/habit-logs', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { habito_id, data, valor_realizado } = req.body || {};
+
+    if (!habito_id) {
+      return res
+        .status(400)
+        .json({ error: 'O campo habito_id é obrigatório' });
+    }
+
+    const todayIso = new Date().toISOString().split('T')[0];
+    const logDate = data || todayIso;
+    const now = Date.now();
+
+    const { data: created, error } = await supabase
+      .from('habit_logs')
+      .insert([
+        {
+          id: randomUUID(),
+          user_id: userId,
+          habito_id,
+          data: logDate,
+          valor_realizado: valor_realizado ?? 1,
+          created_at: now,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /habit-logs):', error);
+      return res.status(500).json({
+        error: 'Erro ao criar log de hábito',
+        details: error.message || error,
+      });
+    }
+
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('Erro ao criar log de hábito (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao criar log de hábito',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// DELETE /api/habit-logs/:id
+app.delete('/api/habit-logs/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('habit_logs')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Supabase error (DELETE /habit-logs/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao excluir log de hábito',
+        details: error.message || error,
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir log de hábito (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao excluir log de hábito',
+      details: err.message || String(err),
+    });
+  }
+});
+// -------------------------
+// GOALS
+// -------------------------
+
+// GET /api/goals
+app.get('/api/goals', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { data, error } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase error (GET /goals):', error);
+      return res.status(500).json({
+        error: 'Erro ao buscar metas',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao buscar metas (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao buscar metas',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// POST /api/goals
+app.post('/api/goals', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const {
+      nome,
+      descricao,
+      area,
+      categoria,
+      tipo_meta,
+      status,
+      unidade,
+      valor_meta,
+      valor_atual,
+      frequencia,
+      data_inicio,
+      prazo,
+      data_conclusao,
+      projeto_relacionado_id,
+    } = req.body || {};
+
+    if (!nome) {
+      return res.status(400).json({ error: 'O campo nome é obrigatório' });
+    }
+
+    const now = Date.now();
+
+    const { data, error } = await supabase
+      .from('goals')
+      .insert([
+        {
+          id: randomUUID(),
+          user_id: userId,
+          nome,
+          descricao: descricao || null,
+          area: area || null,
+          categoria: categoria || null,
+          tipo_meta: tipo_meta || null,
+          status: status || 'IN_PROGRESS',
+          unidade: unidade || null,
+          valor_meta: valor_meta ?? null,
+          valor_atual: valor_atual ?? 0,
+          frequencia: frequencia || null,
+          data_inicio: data_inicio || null,
+          prazo: prazo || null,
+          data_conclusao: data_conclusao || null,
+          projeto_relacionado_id: projeto_relacionado_id || null,
+          created_at: now,
+          updated_at: now,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (POST /goals):', error);
+      return res.status(500).json({
+        error: 'Erro ao criar meta',
+        details: error.message || error,
+      });
+    }
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Erro ao criar meta (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao criar meta',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// PUT /api/goals/:id
+app.put('/api/goals/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const updates = {
+      ...req.body,
+      updated_at: Date.now(),
+    };
+
+    delete updates.id;
+    delete updates.user_id;
+    delete updates.created_at;
+
+    const { data, error } = await supabase
+      .from('goals')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error (PUT /goals/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao atualizar meta',
+        details: error.message || error,
+      });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('Erro ao atualizar meta (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao atualizar meta',
+      details: err.message || String(err),
+    });
+  }
+});
+
+// DELETE /api/goals/:id
+app.delete('/api/goals/:id', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'];
+    const { id } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID não informado' });
+    }
+
+    const { error } = await supabase
+      .from('goals')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Supabase error (DELETE /goals/:id):', error);
+      return res.status(500).json({
+        error: 'Erro ao excluir meta',
+        details: error.message || error,
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erro ao excluir meta (exception):', err);
+    res.status(500).json({
+      error: 'Erro ao excluir meta',
+      details: err.message || String(err),
+    });
+  }
+});
 
 // -------------------------
 // PORTA
